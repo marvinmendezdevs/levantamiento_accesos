@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text-main: #1a202c;
+  --text-muted: #718096;
+  --accent: #3b82f6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+body { background: var(--bg); color: var(--text-main); }
+html { scroll-behavior: smooth; }
