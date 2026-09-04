@@ -5,11 +5,11 @@ import { Sidebar } from "@/components/Sidebar";
 import { CalendarPicker } from "@/components/CalendarPicker";
 import { KPICard } from "@/components/KPICard";
 import { SchoolsTable } from "@/components/SchoolsTable";
-import { GruposChart, DonutsRow } from "@/components/Charts";
+import { GruposChart } from "@/components/Charts";
 
 interface Stats {
   fechaReferencia: string | null;
-  centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number };
+  centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number; completados: number };
   docentes:         { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
   estudiantes:      { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
 }
@@ -33,15 +33,31 @@ export default function DashboardPage() {
   const [fecha, setFecha] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [grupoFiltro, setGrupoFiltro] = useState("");
+  const [gruposDisponibles, setGruposDisponibles] = useState<string[]>([]);
+
+  // Lista de grupos para el filtro (tantos como existan en centros_escolares.grupo)
+  useEffect(() => {
+    fetch("/api/grupos")
+      .then(r => r.json())
+      .then(j => {
+        const lista = (j.data ?? []).map((r: { grupo: string }) => r.grupo).filter(Boolean).sort();
+        setGruposDisponibles(lista);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
-    const url = fecha ? `/api/stats?fecha=${fecha}` : "/api/stats";
-    fetch(url)
+    const params = new URLSearchParams();
+    if (fecha) params.set("fecha", fecha);
+    if (grupoFiltro) params.set("grupo", grupoFiltro);
+    const qs = params.toString();
+    fetch(`/api/stats${qs ? `?${qs}` : ""}`)
       .then(r => r.ok ? r.json() : null)
       .then(j => { setStats(j); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [fecha]);
+  }, [fecha, grupoFiltro]);
 
   const globalPct = stats
     ? Math.round(((stats.docentes.conAcceso + stats.estudiantes.conAcceso) /
@@ -59,13 +75,13 @@ export default function DashboardPage() {
         {/* Top bar */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-10 px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-bold text-slate-800 text-base leading-tight">Tablero de Accesos</h1>
-            <p className="text-xs text-slate-400">MINED · Levantamiento de datos</p>
+            <h1 className="font-bold text-slate-800 text-base leading-tight">Reporte de Accesos</h1>
+            <p className="text-xs text-slate-400">Nueva Escalada · Levantamiento de datos</p>
           </div>
-          {fecha && (
+          {stats?.fechaReferencia && (
             <div className="bg-blue-50 px-3 py-2 rounded-xl text-right">
               <p className="text-xs text-blue-500 font-medium">Datos al</p>
-              <p className="text-sm font-bold text-blue-700">{formatDate(fecha)}</p>
+              <p className="text-sm font-bold text-blue-700">{formatDate(stats.fechaReferencia)}</p>
             </div>
           )}
         </header>
@@ -91,45 +107,56 @@ export default function DashboardPage() {
 
               {stats && (
                 <>
+                  {/* Filtro por grupo */}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="grupo-filtro" className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                      Filtrar por grupo
+                    </label>
+                    <select
+                      id="grupo-filtro"
+                      value={grupoFiltro}
+                      onChange={e => setGrupoFiltro(e.target.value)}
+                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    >
+                      <option value="">Todos los grupos</option>
+                      {gruposDisponibles.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+
                   {/* Chips de resumen */}
                   <section id="resumen" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <StatChip label="Total CEs"      value={stats.centrosEscolares.total}
+                    <StatChip label="Total Centros Escolares" value={stats.centrosEscolares.total}
                       color="bg-white text-slate-700 ring-1 ring-slate-200 shadow-sm" />
-                    <StatChip label="CEs con datos"  value={stats.centrosEscolares.conDatos}
+                    <StatChip label="Centros Escolares con al menos un acceso" value={stats.centrosEscolares.conDatos}
                       color="bg-blue-600 text-white shadow-sm" />
-                    <StatChip label="CEs pendientes" value={stats.centrosEscolares.sinDatos}
+                    <StatChip label="Centros Escolares pendientes" value={stats.centrosEscolares.sinDatos}
                       color="bg-red-50 text-red-600 ring-1 ring-red-100" />
-                    <StatChip label="Avance global"  value={`${globalPct}%`}
-                      color="bg-violet-600 text-white shadow-sm" />
+                    <StatChip label="Centros Escolares completados (100%+)" value={stats.centrosEscolares.completados}
+                      color="bg-emerald-600 text-white shadow-sm" />
                   </section>
 
                   {/* KPI Cards */}
                   <section id="docentes">
                     <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Avance por categoría</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                      <KPICard title="Centros Escolares" subtitle="CEs con al menos 1 acceso" icon="🏫"
+                      <KPICard title="Centros Escolares" subtitle="Con al menos un acceso registrado" icon="🏫"
                         total={stats.centrosEscolares.total} conAcceso={stats.centrosEscolares.conDatos}
                         sinAcceso={stats.centrosEscolares.sinDatos} pct={stats.centrosEscolares.pct} color="blue" />
-                      <KPICard title="Docentes" subtitle={`${stats.docentes.cesConAcceso} CEs con docentes`} icon="👨‍🏫"
+                      <KPICard title="Docentes" subtitle={`${stats.docentes.cesConAcceso} Centros Escolares con docentes`} icon="👨‍🏫"
                         total={stats.docentes.total} conAcceso={stats.docentes.conAcceso}
                         sinAcceso={stats.docentes.sinAcceso} pct={stats.docentes.pct} color="green" />
-                      <KPICard title="Estudiantes" subtitle={`${stats.estudiantes.cesConAcceso} CEs con estudiantes`} icon="🎒"
+                      <KPICard title="Estudiantes" subtitle={`${stats.estudiantes.cesConAcceso} Centros Escolares con estudiantes`} icon="🎒"
                         total={stats.estudiantes.total} conAcceso={stats.estudiantes.conAcceso}
                         sinAcceso={stats.estudiantes.sinAcceso} pct={stats.estudiantes.pct} color="amber" />
                     </div>
                   </section>
 
-                  {/* Gráficos */}
-                  <section id="grupos" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Gráfico */}
+                  <section id="grupos">
                     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
                       <h2 className="font-semibold text-slate-800 mb-1">Avance por grupo</h2>
                       <p className="text-xs text-slate-400 mb-4">% del denominador base por grupo</p>
                       <GruposChart fecha={fecha} />
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
-                      <h2 className="font-semibold text-slate-800 mb-1">Cobertura general</h2>
-                      <p className="text-xs text-slate-400 mb-2">% del denominador base cubierto</p>
-                      <DonutsRow stats={stats} />
                     </div>
                   </section>
                 </>
@@ -138,20 +165,28 @@ export default function DashboardPage() {
               {/* Tabla de escuelas */}
               <section id="escuelas">
                 <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Detalle por centro escolar</h2>
-                <SchoolsTable fecha={fecha} />
+                <SchoolsTable fecha={fecha} grupo={grupoFiltro} />
               </section>
             </div>
 
             {/* ── Calendario ── derecha en xl+, abajo en móvil */}
-            <div className="w-full xl:w-56 xl:shrink-0 xl:sticky xl:top-20">
+            <div className="w-full xl:w-56 xl:shrink-0 xl:sticky xl:top-20 space-y-4">
               <CalendarPicker onDateChange={setFecha} />
+
+              {/* Avance global de usuarios — estático, informativo */}
+              {stats && (
+                <div className="bg-blue-600 rounded-2xl p-5 text-center text-white shadow-sm">
+                  <p className="text-3xl font-bold">{globalPct}%</p>
+                  <p className="text-xs mt-1 opacity-90">Avance global de usuarios</p>
+                </div>
+              )}
             </div>
 
           </div>
         </div>
 
         <footer className="px-4 sm:px-8 py-5 text-center text-xs text-slate-400 border-t border-slate-200">
-          MINED El Salvador · {new Date().getFullYear()} · Tablero de Accesos
+          Reporte de Accesos · Nueva Escalada · {new Date().getFullYear()}
         </footer>
       </div>
     </div>

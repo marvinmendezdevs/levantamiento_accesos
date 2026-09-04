@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tablero de Accesos — MINED",
+  title: "Reporte de Accesos — Nueva Escalada",
   description: "Seguimiento de accesos de docentes y estudiantes por centro escolar",
 };
 

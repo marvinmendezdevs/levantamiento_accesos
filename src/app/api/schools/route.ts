@@ -18,9 +18,6 @@ export async function GET(request: Request) {
 
     const searchWild = `%${search}%`;
 
-    // Grupos para el dropdown (sin filtro de fecha)
-    const gruposRes = await sql`SELECT DISTINCT grupo FROM centros_escolares WHERE grupo IS NOT NULL ORDER BY grupo`;
-
     // Si no hay fecha disponible aún, devolvemos todos los CEs con acceso = 0
     if (!lastDate) {
       const baseRows = await sql`
@@ -49,7 +46,6 @@ export async function GET(request: Request) {
         data: baseRows,
         pagination: { page, limit, total: countRes[0]?.total ?? 0, totalPages: Math.ceil((countRes[0]?.total ?? 0) / limit) },
         fechaReferencia: null,
-        grupos: gruposRes.map((r: Record<string, unknown>) => r.grupo as string),
       });
     }
 
@@ -64,16 +60,21 @@ export async function GET(request: Request) {
           ce.total_estudiantes                                         AS "totalEstudiantes",
           COALESCE(ad.docentes_con_acceso,    0)                      AS "docentesConAcceso",
           COALESCE(ad.estudiantes_con_acceso, 0)                      AS "estudiantesConAcceso",
+          -- Sin base (total = 0) pero con acceso reportado: la barra va llena (100),
+          -- no en 0 — no hay denominador que dividir, pero sí hubo acceso real.
           CASE WHEN ce.total_docentes > 0
             THEN ROUND(COALESCE(ad.docentes_con_acceso,0) * 100.0 / ce.total_docentes, 1)
+            WHEN COALESCE(ad.docentes_con_acceso,0) > 0 THEN 100
             ELSE 0 END                                                AS "pctDocentes",
           CASE WHEN ce.total_estudiantes > 0
             THEN ROUND(COALESCE(ad.estudiantes_con_acceso,0) * 100.0 / ce.total_estudiantes, 1)
+            WHEN COALESCE(ad.estudiantes_con_acceso,0) > 0 THEN 100
             ELSE 0 END                                                AS "pctEstudiantes",
           CASE WHEN (ce.total_docentes + ce.total_estudiantes) > 0
             THEN ROUND(
               (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0))
               * 100.0 / (ce.total_docentes + ce.total_estudiantes), 1)
+            WHEN (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0)) > 0 THEN 100
             ELSE 0 END                                                AS pct_general
         FROM centros_escolares ce
         LEFT JOIN accesos_diarios ad
@@ -102,6 +103,7 @@ export async function GET(request: Request) {
             THEN ROUND(
               (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0))
               * 100.0 / (ce.total_docentes + ce.total_estudiantes), 1)
+            WHEN (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0)) > 0 THEN 100
             ELSE 0 END AS pct_general
         FROM centros_escolares ce
         LEFT JOIN accesos_diarios ad
@@ -128,7 +130,6 @@ export async function GET(request: Request) {
         totalPages: Math.ceil(Number(countRes[0]?.total ?? 0) / limit),
       },
       fechaReferencia: lastDate,
-      grupos: gruposRes.map((r: Record<string, unknown>) => r.grupo as string),
     });
   } catch (e) {
     console.error("schools API error:", e);

@@ -18,8 +18,8 @@ export function Sidebar() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0">ME</div>
           <div>
-            <p className="font-bold text-slate-800 text-sm leading-tight">Tablero</p>
-            <p className="text-xs text-slate-400">MINED · Accesos</p>
+            <p className="font-bold text-slate-800 text-sm leading-tight">Reporte</p>
+            <p className="text-xs text-slate-400">Nueva Escalada</p>
           </div>
         </div>
       </div>
@@ -41,7 +41,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-5 py-4 border-t border-slate-100 shrink-0">
-        <p className="text-xs text-slate-400">© {new Date().getFullYear()} MINED</p>
+        <p className="text-xs text-slate-400">© {new Date().getFullYear()} Reporte de Accesos</p>
       </div>
     </aside>
   );

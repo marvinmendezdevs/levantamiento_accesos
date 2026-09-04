@@ -26,7 +26,7 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
         <div className={`h-full ${color} rounded-full transition-all duration-300`}
           style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
-      <span className={`text-xs font-medium w-12 text-right ${overHundred ? "text-violet-600 font-bold" : "text-slate-600"}`}>
+      <span className={`text-xs font-medium w-12 text-right whitespace-nowrap ${overHundred ? "text-violet-600 font-bold" : "text-slate-600"}`}>
         {pct}%{overHundred ? " ✦" : ""}
       </span>
     </div>
@@ -34,21 +34,19 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
 }
 
 function StatusBadge({ pct }: { pct: number }) {
-  if (pct === 0)    return <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-600 font-medium">Sin datos</span>;
-  if (pct < 50)     return <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-600 font-medium">Parcial</span>;
-  if (pct < 100)    return <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-600 font-medium">En progreso</span>;
-  return <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-600 font-medium">✓ Completo</span>;
+  if (pct === 0)    return <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-600 font-medium whitespace-nowrap">Sin datos</span>;
+  if (pct < 50)     return <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-600 font-medium whitespace-nowrap">Parcial</span>;
+  if (pct < 100)    return <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-600 font-medium whitespace-nowrap">En progreso</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-600 font-medium whitespace-nowrap">✓ Completo</span>;
 }
 
-interface Props { fecha?: string | null; }
+interface Props { fecha?: string | null; grupo?: string; }
 
-export function SchoolsTable({ fecha }: Props) {
+export function SchoolsTable({ fecha, grupo = "" }: Props) {
   const [schools, setSchools]       = useState<School[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 1 });
-  const [grupos, setGrupos]         = useState<string[]>([]);
   const [search, setSearch]         = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [grupo, setGrupo]           = useState("");
   const [estado, setEstado]         = useState("");
   const [loading, setLoading]       = useState(true);
 
@@ -64,7 +62,6 @@ export function SchoolsTable({ fecha }: Props) {
       const json = await res.json();
       setSchools(json.data ?? []);
       setPagination(json.pagination ?? { page: 1, limit: 10, total: 0, totalPages: 1 });
-      if (json.grupos?.length) setGrupos(json.grupos);
     } finally { setLoading(false); }
   }, []);
 
@@ -73,6 +70,9 @@ export function SchoolsTable({ fecha }: Props) {
     const t = setTimeout(() => setSearch(searchInput), 350);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // el filtro de grupo viene del padre (dashboard): al cambiar, volvemos a página 1
+  useEffect(() => { setPagination(p => ({ ...p, page: 1 })); }, [grupo]);
 
   useEffect(() => {
     fetchSchools(pagination.page, search, grupo, estado, fecha);
@@ -105,20 +105,13 @@ export function SchoolsTable({ fecha }: Props) {
             onChange={e => { setSearchInput(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
           />
           <select
-            value={grupo} onChange={e => setFilter(() => setGrupo(e.target.value))}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-          >
-            <option value="">Todos los grupos</option>
-            {grupos.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <select
             value={estado} onChange={e => setFilter(() => setEstado(e.target.value))}
             className="px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
           >
             {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
-          {(search || grupo || estado) && (
-            <button onClick={() => { setFilter(() => { setSearchInput(""); setSearch(""); setGrupo(""); setEstado(""); }); }}
+          {(search || estado) && (
+            <button onClick={() => { setFilter(() => { setSearchInput(""); setSearch(""); setEstado(""); }); }}
               className="px-3 py-2 text-sm text-red-500 border border-red-200 rounded-xl hover:bg-red-50">
               ✕ Limpiar
             </button>
@@ -166,7 +159,7 @@ export function SchoolsTable({ fecha }: Props) {
                     <p className="text-xs text-slate-400 font-mono">{s.code}</p>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="px-2 py-0.5 rounded-lg text-xs bg-violet-100 text-violet-700 font-semibold">{s.grupo}</span>
+                    <span className="px-2 py-0.5 rounded-lg text-xs bg-violet-100 text-violet-700 font-semibold whitespace-nowrap">{s.grupo}</span>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-xs text-slate-500 mb-1">{s.docentesConAcceso}/{s.totalDocentes}</p>
