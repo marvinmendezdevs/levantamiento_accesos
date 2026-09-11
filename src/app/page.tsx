@@ -12,22 +12,6 @@ interface Stats {
   centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number; completados: number };
   docentes:         { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
   estudiantes:      { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
-  confiabilidad:    { reportados: number; general: number; docentes: number; estudiantes: number };
-}
-
-function confiabilidadColor(pct: number) {
-  if (pct >= 90) return "text-emerald-600";
-  if (pct >= 70) return "text-amber-500";
-  return "text-red-500";
-}
-
-function ConfiabilidadCard({ label, pct }: { label: string; pct: number }) {
-  return (
-    <div className="rounded-xl ring-1 ring-slate-100 bg-slate-50 p-4 text-center">
-      <p className={`text-3xl font-bold ${confiabilidadColor(pct)}`}>{pct}%</p>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
-    </div>
-  );
 }
 
 function StatChip({ label, value, color }: { label: string; value: string | number; color: string }) {
@@ -193,27 +177,6 @@ export default function DashboardPage() {
                       <h2 className="font-semibold text-slate-800 mb-1">Avance por grupo</h2>
                       <p className="text-xs text-slate-400 mb-4">% del denominador base por grupo</p>
                       <GruposChart fecha={fecha} intervenido={intervenidoFiltro} />
-                    </div>
-                  </section>
-
-                  {/* Confiabilidad de la data base (SIGES) */}
-                  <section id="confiabilidad">
-                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
-                      <h2 className="font-semibold text-slate-800 mb-1">Confiabilidad de la data base (SIGES)</h2>
-                      <p className="text-xs text-slate-400 mb-4">
-                        % de los {stats.confiabilidad.reportados.toLocaleString("es-SV")} centros que ya reportaron acceso ese día
-                        cuyo acceso real NO supera la base declarada por SIGES. Cuando la supera, es señal de que
-                        esa base estaba desactualizada.
-                      </p>
-                      {stats.confiabilidad.reportados > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <ConfiabilidadCard label="General" pct={stats.confiabilidad.general} />
-                          <ConfiabilidadCard label="Docentes" pct={stats.confiabilidad.docentes} />
-                          <ConfiabilidadCard label="Estudiantes" pct={stats.confiabilidad.estudiantes} />
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-400">Todavía no hay centros con acceso reportado ese día.</p>
-                      )}
                     </div>
                   </section>
                 </>
