@@ -8,16 +8,19 @@ interface GrupoRow {
   doc_acceso: number; est_acceso: number; pct_general: number;
 }
 
-export function GruposChart({ fecha }: { fecha?: string | null }) {
+export function GruposChart({ fecha, intervenido = "" }: { fecha?: string | null; intervenido?: string }) {
   const [data, setData] = useState<GrupoRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const url = fecha ? `/api/grupos?fecha=${fecha}` : "/api/grupos";
+    const params = new URLSearchParams();
+    if (fecha) params.set("fecha", fecha);
+    if (intervenido) params.set("intervenido", intervenido);
+    const qs = params.toString();
     setLoading(true);
-    fetch(url).then(r => r.json()).then(j => { setData(j.data ?? []); setLoading(false); })
+    fetch(`/api/grupos${qs ? `?${qs}` : ""}`).then(r => r.json()).then(j => { setData(j.data ?? []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [fecha]);
+  }, [fecha, intervenido]);
 
   if (loading) return <div className="h-64 flex items-center justify-center text-slate-400 text-sm">Cargando...</div>;
   if (!data.length) return <div className="h-64 flex items-center justify-center text-slate-400 text-sm">Sin datos</div>;

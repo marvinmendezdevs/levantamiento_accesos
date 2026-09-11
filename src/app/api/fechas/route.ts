@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { noCacheJson } from "@/lib/noCache";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export async function GET() {
@@ -10,8 +10,8 @@ export async function GET() {
       FROM accesos_diarios
       ORDER BY fecha DESC
     `;
-    return NextResponse.json({ fechas: rows.map(r => r.fecha) });
+    return noCacheJson({ fechas: rows.map(r => r.fecha) });
   } catch (e) {
-    return NextResponse.json({ fechas: [] });
+    return noCacheJson({ fechas: [] });
   }
 }

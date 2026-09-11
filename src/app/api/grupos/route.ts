@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { noCacheJson } from "@/lib/noCache";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
     const sql = neon(process.env.DATABASE_URL!);
     const { searchParams } = new URL(request.url);
     const fechaParam = searchParams.get("fecha");
+    const intervenido = searchParams.get("intervenido") ?? ""; // "" | "si" | "no"
     const fechaRes = await sql`SELECT MAX(fecha)::text AS last_date FROM accesos_diarios`;
     const lastDate = fechaParam ?? fechaRes[0]?.last_date ?? null;
 
@@ -27,8 +29,13 @@ export async function GET(request: Request) {
           ELSE 0 END AS pct_general
       FROM centros_escolares ce
       LEFT JOIN accesos_diarios ad ON ad.centro_escolar_code = ce.code AND ad.fecha = ${lastDate}
+      WHERE (
+        ${intervenido} = ''
+        OR (${intervenido} = 'si' AND ce.intervenido = true)
+        OR (${intervenido} = 'no' AND ce.intervenido = false)
+      )
       GROUP BY ce.grupo ORDER BY pct_general DESC`;
 
-    return NextResponse.json({ data: rows, fechaReferencia: lastDate });
-  } catch (e) { return NextResponse.json({ error: String(e) }, { status: 500 }); }
+    return noCacheJson({ data: rows, fechaReferencia: lastDate });
+  } catch (e) { return noCacheJson({ error: String(e) }, 500); }
 }

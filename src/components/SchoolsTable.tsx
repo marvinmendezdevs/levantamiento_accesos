@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 interface School {
-  code: string; nombre: string; grupo: string;
+  code: string; nombre: string; grupo: string; intervenido: boolean;
   totalDocentes: number; totalEstudiantes: number;
   docentesConAcceso: number; estudiantesConAcceso: number;
   pctDocentes: number; pctEstudiantes: number; pct_general: number;
@@ -17,6 +17,12 @@ const ESTADOS = [
   { value: "en_progreso", label: "🔵 En progreso (50–99%)" },
   { value: "completo",    label: "🟢 Completo (≥ 100%)" },
 ];
+
+function IntervenidoBadge({ intervenido }: { intervenido: boolean }) {
+  return intervenido
+    ? <span className="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 font-medium whitespace-nowrap">Sí</span>
+    : <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-500 font-medium whitespace-nowrap">No</span>;
+}
 
 function MiniBar({ pct, color }: { pct: number; color: string }) {
   const overHundred = pct > 100;
@@ -40,9 +46,9 @@ function StatusBadge({ pct }: { pct: number }) {
   return <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-600 font-medium whitespace-nowrap">✓ Completo</span>;
 }
 
-interface Props { fecha?: string | null; grupo?: string; }
+interface Props { fecha?: string | null; grupo?: string; intervenido?: string; }
 
-export function SchoolsTable({ fecha, grupo = "" }: Props) {
+export function SchoolsTable({ fecha, grupo = "", intervenido = "" }: Props) {
   const [schools, setSchools]       = useState<School[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [search, setSearch]         = useState("");
@@ -50,12 +56,12 @@ export function SchoolsTable({ fecha, grupo = "" }: Props) {
   const [estado, setEstado]         = useState("");
   const [loading, setLoading]       = useState(true);
 
-  const fetchSchools = useCallback(async (page: number, q: string, g: string, e: string, f: string | null | undefined) => {
+  const fetchSchools = useCallback(async (page: number, q: string, g: string, e: string, iv: string, f: string | null | undefined) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(page), limit: "10",
-        search: q, grupo: g, estado: e,
+        search: q, grupo: g, estado: e, intervenido: iv,
         ...(f ? { fecha: f } : {}),
       });
       const res  = await fetch(`/api/schools?${params}`);
@@ -71,12 +77,12 @@ export function SchoolsTable({ fecha, grupo = "" }: Props) {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // el filtro de grupo viene del padre (dashboard): al cambiar, volvemos a página 1
-  useEffect(() => { setPagination(p => ({ ...p, page: 1 })); }, [grupo]);
+  // los filtros de grupo e intervenido vienen del padre (dashboard): al cambiar, volvemos a página 1
+  useEffect(() => { setPagination(p => ({ ...p, page: 1 })); }, [grupo, intervenido]);
 
   useEffect(() => {
-    fetchSchools(pagination.page, search, grupo, estado, fecha);
-  }, [pagination.page, search, grupo, estado, fecha]);
+    fetchSchools(pagination.page, search, grupo, estado, intervenido, fecha);
+  }, [pagination.page, search, grupo, estado, intervenido, fecha]);
 
   // reset page on filter change
   const setFilter = (fn: () => void) => { fn(); setPagination(p => ({ ...p, page: 1 })); };
@@ -138,6 +144,7 @@ export function SchoolsTable({ fecha, grupo = "" }: Props) {
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Centro Escolar</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Grupo</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Intervenido</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">Docentes</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">Estudiantes</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">Avance general</th>
@@ -146,7 +153,7 @@ export function SchoolsTable({ fecha, grupo = "" }: Props) {
           </thead>
           <tbody className={`divide-y divide-slate-50 transition-opacity ${loading ? "opacity-40" : "opacity-100"}`}>
             {schools.length === 0 && !loading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400 text-sm">No se encontraron centros escolares.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400 text-sm">No se encontraron centros escolares.</td></tr>
             )}
             {schools.map((s, idx) => {
               const rank = (pagination.page - 1) * pagination.limit + idx + 1;
@@ -161,6 +168,7 @@ export function SchoolsTable({ fecha, grupo = "" }: Props) {
                   <td className="px-4 py-3 text-center">
                     <span className="px-2 py-0.5 rounded-lg text-xs bg-violet-100 text-violet-700 font-semibold whitespace-nowrap">{s.grupo}</span>
                   </td>
+                  <td className="px-4 py-3 text-center"><IntervenidoBadge intervenido={s.intervenido} /></td>
                   <td className="px-4 py-3">
                     <p className="text-xs text-slate-500 mb-1">{s.docentesConAcceso}/{s.totalDocentes}</p>
                     <MiniBar pct={Number(s.pctDocentes)} color="bg-blue-400" />

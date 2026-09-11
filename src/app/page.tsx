@@ -12,6 +12,22 @@ interface Stats {
   centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number; completados: number };
   docentes:         { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
   estudiantes:      { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
+  confiabilidad:    { reportados: number; general: number; docentes: number; estudiantes: number };
+}
+
+function confiabilidadColor(pct: number) {
+  if (pct >= 90) return "text-emerald-600";
+  if (pct >= 70) return "text-amber-500";
+  return "text-red-500";
+}
+
+function ConfiabilidadCard({ label, pct }: { label: string; pct: number }) {
+  return (
+    <div className="rounded-xl ring-1 ring-slate-100 bg-slate-50 p-4 text-center">
+      <p className={`text-3xl font-bold ${confiabilidadColor(pct)}`}>{pct}%</p>
+      <p className="text-xs text-slate-500 mt-1">{label}</p>
+    </div>
+  );
 }
 
 function StatChip({ label, value, color }: { label: string; value: string | number; color: string }) {
@@ -35,6 +51,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [grupoFiltro, setGrupoFiltro] = useState("");
   const [gruposDisponibles, setGruposDisponibles] = useState<string[]>([]);
+  const [intervenidoFiltro, setIntervenidoFiltro] = useState("");
 
   // Lista de grupos para el filtro (tantos como existan en centros_escolares.grupo)
   useEffect(() => {
@@ -52,12 +69,13 @@ export default function DashboardPage() {
     const params = new URLSearchParams();
     if (fecha) params.set("fecha", fecha);
     if (grupoFiltro) params.set("grupo", grupoFiltro);
+    if (intervenidoFiltro) params.set("intervenido", intervenidoFiltro);
     const qs = params.toString();
     fetch(`/api/stats${qs ? `?${qs}` : ""}`)
       .then(r => r.ok ? r.json() : null)
       .then(j => { setStats(j); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [fecha, grupoFiltro]);
+  }, [fecha, grupoFiltro, intervenidoFiltro]);
 
   const globalPct = stats
     ? Math.round(((stats.docentes.conAcceso + stats.estudiantes.conAcceso) /
@@ -107,20 +125,38 @@ export default function DashboardPage() {
 
               {stats && (
                 <>
-                  {/* Filtro por grupo */}
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="grupo-filtro" className="text-xs font-medium text-slate-500 whitespace-nowrap">
-                      Filtrar por grupo
-                    </label>
-                    <select
-                      id="grupo-filtro"
-                      value={grupoFiltro}
-                      onChange={e => setGrupoFiltro(e.target.value)}
-                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    >
-                      <option value="">Todos los grupos</option>
-                      {gruposDisponibles.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
+                  {/* Filtros globales: grupo e intervenido */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="grupo-filtro" className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Filtrar por grupo
+                      </label>
+                      <select
+                        id="grupo-filtro"
+                        value={grupoFiltro}
+                        onChange={e => setGrupoFiltro(e.target.value)}
+                        className="px-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <option value="">Todos los grupos</option>
+                        {gruposDisponibles.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="intervenido-filtro" className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                        Intervenido
+                      </label>
+                      <select
+                        id="intervenido-filtro"
+                        value={intervenidoFiltro}
+                        onChange={e => setIntervenidoFiltro(e.target.value)}
+                        className="px-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <option value="">Todos</option>
+                        <option value="si">Solo intervenidos</option>
+                        <option value="no">Solo no intervenidos</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Chips de resumen */}
@@ -156,7 +192,28 @@ export default function DashboardPage() {
                     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
                       <h2 className="font-semibold text-slate-800 mb-1">Avance por grupo</h2>
                       <p className="text-xs text-slate-400 mb-4">% del denominador base por grupo</p>
-                      <GruposChart fecha={fecha} />
+                      <GruposChart fecha={fecha} intervenido={intervenidoFiltro} />
+                    </div>
+                  </section>
+
+                  {/* Confiabilidad de la data base (SIGES) */}
+                  <section id="confiabilidad">
+                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
+                      <h2 className="font-semibold text-slate-800 mb-1">Confiabilidad de la data base (SIGES)</h2>
+                      <p className="text-xs text-slate-400 mb-4">
+                        % de los {stats.confiabilidad.reportados.toLocaleString("es-SV")} centros que ya reportaron acceso ese día
+                        cuyo acceso real NO supera la base declarada por SIGES. Cuando la supera, es señal de que
+                        esa base estaba desactualizada.
+                      </p>
+                      {stats.confiabilidad.reportados > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <ConfiabilidadCard label="General" pct={stats.confiabilidad.general} />
+                          <ConfiabilidadCard label="Docentes" pct={stats.confiabilidad.docentes} />
+                          <ConfiabilidadCard label="Estudiantes" pct={stats.confiabilidad.estudiantes} />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400">Todavía no hay centros con acceso reportado ese día.</p>
+                      )}
                     </div>
                   </section>
                 </>
@@ -165,7 +222,7 @@ export default function DashboardPage() {
               {/* Tabla de escuelas */}
               <section id="escuelas">
                 <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Detalle por centro escolar</h2>
-                <SchoolsTable fecha={fecha} grupo={grupoFiltro} />
+                <SchoolsTable fecha={fecha} grupo={grupoFiltro} intervenido={intervenidoFiltro} />
               </section>
             </div>
 

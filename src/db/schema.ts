@@ -1,8 +1,9 @@
-import { pgTable, serial, varchar, text, integer, date, timestamp, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, integer, date, timestamp, unique, boolean } from "drizzle-orm/pg-core";
 
 /**
  * Tabla base — denominador fijo, viene del CSV del levantamiento.
- * NO se modifica después del seed inicial.
+ * NO se modifica después del seed inicial (salvo `intervenido`, que se
+ * actualiza manualmente en la BD y el seed nunca debe tocar).
  */
 export const centrosEscolares = pgTable("centros_escolares", {
   id: serial("id").primaryKey(),
@@ -11,6 +12,7 @@ export const centrosEscolares = pgTable("centros_escolares", {
   grupo: varchar("grupo", { length: 10 }),
   totalDocentes: integer("total_docentes").notNull().default(0),
   totalEstudiantes: integer("total_estudiantes").notNull().default(0),
+  intervenido: boolean("intervenido").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
