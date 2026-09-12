@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         centrosEscolares: { total: t.total_ces,       conDatos: 0, sinDatos: t.total_ces,       pct: 0, completados: 0 },
         docentes:         { total: t.total_docentes,  conAcceso: 0, sinAcceso: t.total_docentes, pct: 0, cesConAcceso: 0 },
         estudiantes:      { total: t.total_estudiantes, conAcceso: 0, sinAcceso: t.total_estudiantes, pct: 0, cesConAcceso: 0 },
-        fiabilidad:       { reportados: 0, superaBase: 0 },
+        fiabilidad:       { reportados: 0, exacto: 0 },
       });
     }
 
@@ -54,14 +54,13 @@ export async function GET(request: Request) {
           OR ((ce.total_docentes + ce.total_estudiantes) = 0
             AND (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0)) > 0)
         THEN 1 END)::int AS ces_completados,
-        -- Fiabilidad de la base: solo contamos como "problema" cuando el acceso
-        -- reportado SUPERA (estrictamente) la base de SIGES — es el único caso
-        -- que prueba con certeza que la base estaba desactualizada. Que sea
-        -- menor o igual NO prueba que esté bien (puede faltar gente por acceder).
+        -- Fiabilidad de la base: un CE cuenta como "dato correcto" solo si
+        -- docentes Y estudiantes coinciden EXACTO con lo que declaró SIGES —
+        -- si cualquiera de los dos no calza (de más o de menos), no aplica.
         COUNT(CASE WHEN (ad.docentes_con_acceso > 0 OR ad.estudiantes_con_acceso > 0)
-                    AND (COALESCE(ad.docentes_con_acceso,0) + COALESCE(ad.estudiantes_con_acceso,0))
-                      > (ce.total_docentes + ce.total_estudiantes)
-               THEN 1 END)::int AS ces_supera_base
+                    AND ad.docentes_con_acceso    = ce.total_docentes
+                    AND ad.estudiantes_con_acceso = ce.total_estudiantes
+               THEN 1 END)::int AS ces_exacto
       FROM accesos_diarios ad
       JOIN centros_escolares ce ON ce.code = ad.centro_escolar_code
       WHERE ad.fecha = ${lastDate}
@@ -81,7 +80,7 @@ export async function GET(request: Request) {
         pct: tot.total_docentes > 0 ? Math.round(a.doc_acceso * 100 / tot.total_docentes) : 0, cesConAcceso: a.ces_doc },
       estudiantes: { total: tot.total_estudiantes, conAcceso: a.est_acceso, sinAcceso: tot.total_estudiantes - a.est_acceso,
         pct: tot.total_estudiantes > 0 ? Math.round(a.est_acceso * 100 / tot.total_estudiantes) : 0, cesConAcceso: a.ces_est },
-      fiabilidad: { reportados: a.ces_con_datos, superaBase: a.ces_supera_base },
+      fiabilidad: { reportados: a.ces_con_datos, exacto: a.ces_exacto },
     });
   } catch (e) { return noCacheJson({ error: String(e) }, 500); }
 }

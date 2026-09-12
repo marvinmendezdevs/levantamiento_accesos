@@ -12,7 +12,7 @@ interface Stats {
   centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number; completados: number };
   docentes:         { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
   estudiantes:      { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
-  fiabilidad:       { reportados: number; superaBase: number };
+  fiabilidad:       { reportados: number; exacto: number };
 }
 
 function FiabilidadRing({ pct, size = 104 }: { pct: number; size?: number }) {
@@ -219,8 +219,8 @@ export default function DashboardPage() {
 
               {/* Fiabilidad de la base de SIGES — estático, informativo */}
               {stats && (() => {
-                const { reportados, superaBase } = stats.fiabilidad;
-                const pctCorrecto = reportados > 0 ? Math.round(((reportados - superaBase) * 100) / reportados) : 0;
+                const { reportados, exacto } = stats.fiabilidad;
+                const pctCorrecto = reportados > 0 ? Math.round((exacto * 100) / reportados) : 0;
                 return (
                   <div className="bg-white rounded-2xl p-5 text-center shadow-sm ring-1 ring-slate-200">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fiabilidad de SIGES</p>
