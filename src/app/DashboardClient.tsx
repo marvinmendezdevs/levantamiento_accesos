@@ -15,6 +15,21 @@ interface Stats {
   fiabilidad:       { reportados: number; superaBase: number };
 }
 
+function FiabilidadRing({ pct, size = 104 }: { pct: number; size?: number }) {
+  const r = 42; const circ = 2 * Math.PI * r;
+  const dash = Math.min((pct / 100) * circ, circ);
+  const color = pct >= 90 ? "#10b981" : pct >= 70 ? "#f59e0b" : "#ef4444";
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="#e2e8f0" strokeWidth="9" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 50 50)" style={{ transition: "stroke-dasharray 0.6s ease" }} />
+      <text x="50" y="57" textAnchor="middle" fontSize="24" fontWeight="bold" fill="#1e293b">{pct}%</text>
+    </svg>
+  );
+}
+
 function StatChip({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <div className={`rounded-2xl p-5 text-center ${color}`}>
@@ -203,19 +218,24 @@ export default function DashboardPage() {
               )}
 
               {/* Fiabilidad de la base de SIGES — estático, informativo */}
-              {stats && (
-                <div className="bg-white rounded-2xl p-5 text-center shadow-sm ring-1 ring-slate-200">
-                  <p className="text-3xl font-bold text-amber-600">
-                    {stats.fiabilidad.reportados > 0
-                      ? Math.round((stats.fiabilidad.superaBase * 100) / stats.fiabilidad.reportados)
-                      : 0}%
-                  </p>
-                  <p className="text-xs mt-1 text-slate-600">Centros que superan su base de SIGES</p>
-                  <p className="text-[11px] mt-1 text-slate-400">
-                    {stats.fiabilidad.superaBase} de {stats.fiabilidad.reportados.toLocaleString("es-SV")} que reportaron acceso — posible dato desactualizado
-                  </p>
-                </div>
-              )}
+              {stats && (() => {
+                const { reportados, superaBase } = stats.fiabilidad;
+                const pctCorrecto = reportados > 0 ? Math.round(((reportados - superaBase) * 100) / reportados) : 0;
+                return (
+                  <div className="bg-white rounded-2xl p-5 text-center shadow-sm ring-1 ring-slate-200">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fiabilidad de SIGES</p>
+                    <div className="flex justify-center">
+                      <FiabilidadRing pct={pctCorrecto} />
+                    </div>
+                    <p className="text-xs mt-3 text-slate-600 leading-snug">
+                      El <span className="font-semibold">{pctCorrecto}%</span> de los datos de SIGES está correcto
+                    </p>
+                    <p className="text-[10px] mt-1 text-slate-400">
+                      Según los {reportados.toLocaleString("es-SV")} centros que ya reportaron acceso
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
