@@ -12,6 +12,7 @@ interface Stats {
   centrosEscolares: { total: number; conDatos: number; sinDatos: number; pct: number; completados: number };
   docentes:         { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
   estudiantes:      { total: number; conAcceso: number; sinAcceso: number; pct: number; cesConAcceso: number };
+  fiabilidad:       { reportados: number; superaBase: number };
 }
 
 function StatChip({ label, value, color }: { label: string; value: string | number; color: string }) {
@@ -198,6 +199,17 @@ export default function DashboardPage() {
                 <div className="bg-blue-600 rounded-2xl p-5 text-center text-white shadow-sm">
                   <p className="text-3xl font-bold">{globalPct}%</p>
                   <p className="text-xs mt-1 opacity-90">Avance global de usuarios</p>
+                </div>
+              )}
+
+              {/* Fiabilidad de la base de SIGES — estático, informativo */}
+              {stats && (
+                <div className="bg-white rounded-2xl p-5 text-center shadow-sm ring-1 ring-slate-200">
+                  <p className="text-3xl font-bold text-amber-600">{stats.fiabilidad.superaBase}</p>
+                  <p className="text-xs mt-1 text-slate-600">Centros que superan su base de SIGES</p>
+                  <p className="text-[11px] mt-1 text-slate-400">
+                    de {stats.fiabilidad.reportados.toLocaleString("es-SV")} que reportaron acceso — posible dato desactualizado
+                  </p>
                 </div>
               )}
             </div>
