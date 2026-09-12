@@ -205,10 +205,14 @@ export default function DashboardPage() {
               {/* Fiabilidad de la base de SIGES — estático, informativo */}
               {stats && (
                 <div className="bg-white rounded-2xl p-5 text-center shadow-sm ring-1 ring-slate-200">
-                  <p className="text-3xl font-bold text-amber-600">{stats.fiabilidad.superaBase}</p>
+                  <p className="text-3xl font-bold text-amber-600">
+                    {stats.fiabilidad.reportados > 0
+                      ? Math.round((stats.fiabilidad.superaBase * 100) / stats.fiabilidad.reportados)
+                      : 0}%
+                  </p>
                   <p className="text-xs mt-1 text-slate-600">Centros que superan su base de SIGES</p>
                   <p className="text-[11px] mt-1 text-slate-400">
-                    de {stats.fiabilidad.reportados.toLocaleString("es-SV")} que reportaron acceso — posible dato desactualizado
+                    {stats.fiabilidad.superaBase} de {stats.fiabilidad.reportados.toLocaleString("es-SV")} que reportaron acceso — posible dato desactualizado
                   </p>
                 </div>
               )}
